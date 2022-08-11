@@ -1,0 +1,93 @@
+Launch 3 ec2 instances : Ubuntu 18.04 , 2vCPU, 4GB RAM (t2.medium)
+
+1 instance -> Master
+2 instances -> Nodes (Node 1 and Node 2)
+
+Run below commands in all 3 instances
+--------------------------------------
+
+* Install https package : this https is needed for intra cluster communication (particularly from control plane to individual pods)
+
+sudo su
+apt-get update
+apt-get install apt-transport-https
+
+* On each server, install Docker (not downloading)
+
+apt install docker.io -y
+docker --version
+systemctl start docker
+systemctl enable docker
+(To tell systemd to start services automatically at boot, you must enable them. To start a service at boot, use the enable command: sudo systemctl enable application)
+
+* Setup open GPG Key : this is required for intra cluster communication. It will be added to the source key on this node (i.e.) when K8s sends signed info to our host, it is going to accept those information because this open GPG key is present in the source key.
+
+sudo curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+
+* Edit source file list (This will download the kubernetes package, on each server and then install kubernetes tool)
+
+nano /etc/apt/sources.list.d/kubernetes.list
+
+Write the below command to the file, ctrl + X, Y,enter.
+
+deb http://apt.kubernetes.io/ kubernetes-xenial main
+
+(The function of the /etc/apt/sources. list. d directory is as follows: Using the directory you can easily add new repositories without the need to edit the central /etc/apt/sources.)
+(The /etc/apt/sources. list file looks like this: This file contains the list of default sources for installing software on your system. )
+
+
+apt-get update
+
+* installing the tools from the kubernetes package
+
+apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+
+
+Run below commands in Master node
+--------------------------------------
+BOOTSTRAPPING THE MASTER NODE (IN MASTER)
+
+* On the Master server only, initialize the cluster
+
+kubeadm init
+ 
+* After this command finishes, copy kubeadm join provided and can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 172.31.19.23:6443 --token keu0z6.rk9c61piwwt8dk7x \
+        --discovery-token-ca-cert-hash sha256:c9599920a9ffde01ab85c0adc2ffc8cb137f7839126d59e20679ab4971e55046
+
+
+* On the Master server only, set up the kubernetes configuration file for general usage
+
+mkdir -p $HOME/.kube
+
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+* On the Master server only, apply a common networking plugin. In this case, Flannel : Flannel is a basic overlay network that works by assigning a range of subnet addresses (usually IPv4 with a /24 or /16 subnet mask). An overlay network is a computer network that is built on top of another network. Flannel is an open-source virtual network project managed by CoreOS network designed for Kubernetes. Each host in a flannel cluster runs an agent called flanneld . It assigns each host a subnet, which acts as the IP address pool for containers running on the host.
+
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/k8s-manifests/kube-flannel-rbac.yml
+
+Run below commands in Nodes/Slave
+-----------------------------------
+
+CONFIGURE WORKER NODES TO CLUSTER
+
+* On the Worker servers only, join them to the cluster using the command you copied earlier
+
+e.g - kubeadm join 172.31.19.23:6443 --token keu0z6.rk9c61piwwt8dk7x --discovery-token-ca-cert-hash sha256:c9599920a9ffde01ab85c0adc2ffc8cb137f7839126d59e20679ab4971e55046
+
+
+Run below commands in Master
+-------------------------------
+
+* List the nodes connected to the cluster
+
+kubectl get nodes
+
+
+
+We should have working kubernetes cluster !!
