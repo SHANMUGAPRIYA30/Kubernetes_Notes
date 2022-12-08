@@ -80,6 +80,12 @@ CONFIGURE WORKER NODES TO CLUSTER
 
 e.g - kubeadm join 172.31.19.23:6443 --token keu0z6.rk9c61piwwt8dk7x --discovery-token-ca-cert-hash sha256:c9599920a9ffde01ab85c0adc2ffc8cb137f7839126d59e20679ab4971e55046
 
+If we missed the token
+-----------------------------
+
+* Below is the command to generate the token in master node
+
+kudeadm token create --print-join-command
 
 Run below commands in Master
 -------------------------------
